@@ -69,6 +69,8 @@ class confluence {
     $confluence_password=$params::confluence_password
   }
 
+  $confluence_license='PRQrnwjXAxVHQqEgKNqBbeVCXQUANDtnDTALHhIQUqJeKJoxPCLwLnItgcdodwFtaDhWrCPdJDXeItarsXgJGwLcJNjTmhVaomflDHJXJLLCMaMFInTnftDbnfOIGRIPHPnjEFnOVaoVGOqWgtUAJkorxbFUlInStOrTFMFeJjIGOwMSOLqhmqoxhaqxhPDtbgDefaNPEkbkltlgXJJfnqCangLuiLVFiCAkDrUrNSJcaBbPVwDnXeeEAHoPSUuRcTqRbPsPammLjPUacgTpxaPSkCMKrkXcENirgsFXacNtJHCLhrLggNfwAoDECAFuQTGTh2mK6lph2xkqnR38CREwfTsEGT4qe2fgvGvlNhBoRpo&lt;lpom5Q&gt;x592J9qyP&lt;zWKLO49COOXa99MJqL7b1B09CtMCzUYInZ0W5KWjW2txmh3td1HQWNyZEeLQ5J8GKmEBNm6ehzHnBdUfm84cHO9pGdyClpbNAMxkLhtXYbNZHsexpbxYwWg8qGUgwSWhghPwAM8TcV1nQWeGr3D3rPl9QBWRqwTkukLU6ZBs6BZqo7kbzrF6jKc5WCZoce4p6Jpw&gt;Oz6xtLpqRoyQdRjgj3sHpXHFliyMoHEgqfDuXM&lt;&gt;fVEkQ9'
+
   case $operatingsystem {
     'redhat','centos': { include confluence::redhat }
   }
@@ -78,7 +80,7 @@ class confluence {
       ensure => present,
   }
 
-  File { owner => root, group => users, mode => 644 }
+  File { owner => 0, group => 0, mode => 644 }
   Exec { path => "/bin:/sbin:/usr/bin:/usr/sbin" }
 
   file { "/tmp/confluence-3.3-std.tar.gz":
@@ -103,6 +105,7 @@ class confluence {
     require => Exec [ "extract_confluence" ];
   }
 
+  # confluence package have wrong userid 
   exec { "chown_confluence":
     command => "chown -R root ${confluence_installdir}/${confluence_version}",
     subscribe => Exec [ "extract_confluence" ],
@@ -113,6 +116,11 @@ class confluence {
     name => "${confluence_installdir}/${confluence_version}/confluence/WEB-INF/classes/confluence-init.properties",
     content => template ("confluence-init.properties.erb"),
     subscribe => Exec [ "extract_confluence" ],
+  }
+
+  file { "confluence.cfg.xml":
+    name => "${confluence_datadir}/confluence.cfg.xml",
+    content => template ("confluence.cfg.xml.erb"),
   }
 
   #file { "server.xml":
@@ -128,10 +136,10 @@ class confluence {
     ensure => running,
     hasstatus => true,
     require => File[ "/etc/init.d/confluence" ],
-    subscribe => File[ "confluence-init.properties" ];
+    subscribe => File[ "confluence-init.properties", "confluence.cfg.xml" ];
   }
 
-  # mysql database setup
+  # mysql database setup (onetime)
   file {"/tmp/confluence.sql":
     source => "puppet:///modules/confluence/confluence.sql",
   }
