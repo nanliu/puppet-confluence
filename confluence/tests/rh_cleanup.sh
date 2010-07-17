@@ -15,6 +15,6 @@ rm -rf /usr/local/confluence-data
 # mysql
 mysql -e "drop user 'confluence'@'localhost';"
 yes "Yes" | mysqladmin drop confluence
-service stop mysqld
-yes | yum remove mysql-server
-yes | yum remove mysql
+service mysqld stop
+#yes | yum remove mysql-server
+#yes | yum remove mysql

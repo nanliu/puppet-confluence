@@ -69,7 +69,7 @@ class confluence {
     $confluence_password=$params::confluence_password
   }
 
-  $confluence_license='PRQrnwjXAxVHQqEgKNqBbeVCXQUANDtnDTALHhIQUqJeKJoxPCLwLnItgcdodwFtaDhWrCPdJDXeItarsXgJGwLcJNjTmhVaomflDHJXJLLCMaMFInTnftDbnfOIGRIPHPnjEFnOVaoVGOqWgtUAJkorxbFUlInStOrTFMFeJjIGOwMSOLqhmqoxhaqxhPDtbgDefaNPEkbkltlgXJJfnqCangLuiLVFiCAkDrUrNSJcaBbPVwDnXeeEAHoPSUuRcTqRbPsPammLjPUacgTpxaPSkCMKrkXcENirgsFXacNtJHCLhrLggNfwAoDECAFuQTGTh2mK6lph2xkqnR38CREwfTsEGT4qe2fgvGvlNhBoRpo&lt;lpom5Q&gt;x592J9qyP&lt;zWKLO49COOXa99MJqL7b1B09CtMCzUYInZ0W5KWjW2txmh3td1HQWNyZEeLQ5J8GKmEBNm6ehzHnBdUfm84cHO9pGdyClpbNAMxkLhtXYbNZHsexpbxYwWg8qGUgwSWhghPwAM8TcV1nQWeGr3D3rPl9QBWRqwTkukLU6ZBs6BZqo7kbzrF6jKc5WCZoce4p6Jpw&gt;Oz6xtLpqRoyQdRjgj3sHpXHFliyMoHEgqfDuXM&lt;&gt;fVEkQ9'
+  $confluence_license='AAABOg0ODAoPeNpdkF1rwjAUhu/zKwK7rrRxm0MITJsOumkdtk6Q3cT06AJpKvmQ+e8Xawuy23PyPu9z8rCFGr97hUmCk8l0PJk+veCUVZjESYwYWGHkyclW07TVB+VBC8BJjDcWjP2e4tJx48DghRSgLaDCN3swq0O3pwGRGuDXPOMO6BUaxZOIEBRwjgtX8AYoa/1RcYvn3ikwSISmUdjJM1BnPAxvsyWXitb77tUrdyFiJdcj0TYoO3PluyJ64CqIdJDeqrqcoCsqq9m6ytZI3eZfwfGaICiQtQPNw3XZ70may6Cb9LodbjguVd6Go4u2BktjtDJHrqW9tc8GLVRmRSCMYzImqARzBpMzOv/YPUa7t9VzNFuyPFrnmy3qLcN2kbMh0Q/vbLxWspEOavTpjfjhFv7/6R+ObpoJMCwCFBzjnNnfcOIaq2R1pEmcu1oTeowbAhRwm81wsBaZ+0ZYWLZIw0liPuuIdw==X02fn'
 
   case $operatingsystem {
     'redhat','centos': { include confluence::redhat }
@@ -121,6 +121,7 @@ class confluence {
   file { "confluence.cfg.xml":
     name => "${confluence_datadir}/confluence.cfg.xml",
     content => template ("confluence.cfg.xml.erb"),
+    #noop => true,
   }
 
   #file { "server.xml":
@@ -135,8 +136,10 @@ class confluence {
     enable => true,
     ensure => running,
     hasstatus => true,
-    require => File[ "/etc/init.d/confluence" ],
-    subscribe => File[ "confluence-init.properties", "confluence.cfg.xml" ];
+    require => [ File[ "/etc/init.d/confluence", 
+                     "confluence-init.properties", 
+		     "confluence.cfg.xml" ],
+	         Exec[ "create_${confluence_database}" ] ];
   }
 
   # mysql database setup (onetime)
@@ -151,6 +154,7 @@ class confluence {
 	       mysql ${confluence_database} > /tmp/confluence.sql",
     unless => "/usr/bin/mysql ${confluence_database}",
     require => [ Service[ "mysqld" ], 
-                 File[ "/tmp/confluence.sql" ] ]; 
-  }
+                 File[ "/tmp/confluence.sql" ] ],
+    #noop => true,
+  } 
 }
