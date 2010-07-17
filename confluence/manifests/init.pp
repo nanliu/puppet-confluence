@@ -69,6 +69,9 @@ class confluence {
     $confluence_password=$params::confluence_password
   }
 
+  # not usable for now
+  $confluence_license='AAABOg0ODAoPeNpdkF1rwjAUhu/zKwK7rrRxm0MITJsOumkdtk6Q3cT06AJpKvmQ+e8Xawuy23PyPu9z8rCFGr97hUmCk8l0PJk+veCUVZjESYwYWGHkyclW07TVB+VBC8BJjDcWjP2e4tJx48DghRSgLaDCN3swq0O3pwGRGuDXPOMO6BUaxZOIEBRwjgtX8AYoa/1RcYvn3ikwSISmUdjJM1BnPAxvsyWXitb77tUrdyFiJdcj0TYoO3PluyJ64CqIdJDeqrqcoCsqq9m6ytZI3eZfwfGaICiQtQPNw3XZ70may6Cb9LodbjguVd6Go4u2BktjtDJHrqW9tc8GLVRmRSCMYzImqARzBpMzOv/YPUa7t9VzNFuyPFrnmy3qLcN2kbMh0Q/vbLxWspEOavTpjfjhFv7/6R+ObpoJMCwCFBzjnNnfcOIaq2R1pEmcu1oTeowbAhRwm81wsBaZ+0ZYWLZIw0liPuuIdw==X02fn'
+
   case $operatingsystem {
     'redhat','centos': { include confluence::redhat }
   }
@@ -78,24 +81,33 @@ class confluence {
       ensure => present,
   }
 
-  File { owner => root, group => users, mode => 644 }
+  File { owner => '0', group => 'root', mode => '0644' }
   Exec { path => "/bin:/sbin:/usr/bin:/usr/sbin" }
 
   file { "/tmp/confluence-3.3-std.tar.gz":
     source => "puppet:///modules/confluence/confluence-3.3-std.tar.gz",
   }
 
-  file { [ "${confluence_installdir}",
-           "${confluence_datadir}" ]:
+  file { "${confluence_installdir}":
     ensure => directory,
   }
 
   exec { "extract_confluence":
     command => "gtar -xf /tmp/confluence-3.3-std.tar.gz -C ${confluence_installdir}",
-    require => File [ "${confluence_installdir}", 
-		      "${confluence_datadir}" ],
+    require => File [ "${confluence_installdir}" ],
     subscribe => File [ "/tmp/confluence-3.3-std.tar.gz" ],
-    creates => "${confluence_installdir}/${confluence_version}/confluence",
+    creates => "${confluence_installdir}/${confluence_version}",
+  }
+
+  file { "/tmp/confluence-data.tar.gz":
+    source => "puppet:///modules/confluence/confluence-data.tar.gz",
+  }
+
+  exec { "extract_confluence_data":
+    command => "gtar -xf /tmp/confluence-data.tar.gz -C ${confluence_installdir}",
+    require => File [ "${confluence_installdir}" ],
+    subscribe => File [ "/tmp/confluence-data.tar.gz" ],
+    creates => "${confluence_datadir}",
   }
 
   file { "${confluence_dir}":
@@ -103,6 +115,7 @@ class confluence {
     require => Exec [ "extract_confluence" ];
   }
 
+  # confluence package have wrong userid 1418
   exec { "chown_confluence":
     command => "chown -R root ${confluence_installdir}/${confluence_version}",
     subscribe => Exec [ "extract_confluence" ],
@@ -113,6 +126,13 @@ class confluence {
     name => "${confluence_installdir}/${confluence_version}/confluence/WEB-INF/classes/confluence-init.properties",
     content => template ("confluence-init.properties.erb"),
     subscribe => Exec [ "extract_confluence" ],
+  }
+
+  # cannot autogen license key, pending confluence API.
+  file { "confluence.cfg.xml":
+    name => "${confluence_datadir}/confluence.cfg.xml",
+    content => template ("confluence.cfg.xml.erb"),
+    noop => true,
   }
 
   #file { "server.xml":
@@ -127,24 +147,24 @@ class confluence {
     enable => true,
     ensure => running,
     hasstatus => true,
-    require => File[ "/etc/init.d/confluence" ],
-    subscribe => File[ "confluence-init.properties" ];
+    require => [ File[ "/etc/init.d/confluence", 
+                     "confluence-init.properties" ],
+	         Exec[ "create_${confluence_database}",
+		     "extract_confluence_data"] ];
   }
 
-  # mysql database setup
+  # mysql database setup (onetime)
   file {"/tmp/confluence.sql":
     source => "puppet:///modules/confluence/confluence.sql",
   }
 
   exec { "create_${confluence_database}":
-    command => "mysql -e \"create user '${confluence_user}'@'localhost' \
-               identified by '${confluence_password}'; \
-	       create database ${confluence_database}; \
+    command => "mysql -e \"create database ${confluence_database}; \
                grant all on ${confluence_database}.* to '${confluence_user}'@'localhost' \
 	       identified by '${confluence_password}';\"; \
-	       mysqlimport ${confluence_database} /tmp/confluence.sql",
+	       mysql ${confluence_database} < /tmp/confluence.sql",
     unless => "/usr/bin/mysql ${confluence_database}",
     require => [ Service[ "mysqld" ], 
-                 File[ "/tmp/confluence.sql" ] ]; 
-  }
+                 File[ "/tmp/confluence.sql" ] ],
+  } 
 }

@@ -9,9 +9,9 @@
     <property name="admin.ui.allow.manual.backup.download">false</property>
     <property name="admin.ui.allow.site.support.email">false</property>
     <property name="attachments.dir">${confluenceHome}/attachments</property>
-    <property name="confluence.license.hash">QrMnpDSfGkOTRJnvuxBbHLEphpoNEkjqGbAElcoGQuxPPcUlmk2L03UO949f2XV9FBOHavcak2L0J74LaIqcpPmoUFnLSXtf</property>
-    <property name="confluence.license.message">qPNmPuKVaSXkoRfkgpkdxtTwpmjuXOPabWNDBJiPpvmFGLiopmCiFAdIiglQFifHvrJTbnECnuONRmvQuVBxWvDOhhUTOLxMquHgiRUFpFalcoAbQURooTnwUebehTSFrIvGmLOTXMVenFeNixoONfxrTMpshgpEEUTDoLwKHRcbqCcIukwHKBJqERrnUaDNPbUuwnTpAVpkCHOeKkdaBOvvSxpBBWDjVmBMMFNndJvlajUHUcpRkBxgBuLdXsaQxxehglcsVLLcwMLMEpDECAFuQjGRh3WO6lzL2kJCePf8RCWPvKaZtxnshca6y4rVFcBRZWD&lt;VFxeTRSmBlmIZuzZRmmBFuXn1fOXasoGKDgSvG2UtuRvdvrSL&lt;&gt;2fFlMCbR2Gpm5ft0lS8S79221nXgU3LSzelruEVjACzIXWLov2r63oVLSstkyACpJWG2K5353K4goCQM&gt;MemK30IGzffk&gt;4tHIF0bzipM1f6JOAGj&lt;uIskRFYu8ce5p29JwKLLKihsYiP4hcjHFD8ByTstBtU8FkX&gt;lz3siB7</property>
-    <property name="confluence.setup.server.id">BEON-R8NS-0CH0-4RSS</property>
+    <property name="confluence.license.hash"></property>
+    <property name="confluence.license.message">AAABOg0ODAoPeNpdkF1rwjAUhu/zKwK7rrRxm0MITJsOumkdtk6Q3cT06AJpKvmQ+e8Xawuy23PyPu9z8rCFGr97hUmCk8l0PJk+veCUVZjESYwYWGHkyclW07TVB+VBC8BJjDcWjP2e4tJx48DghRSgLaDCN3swq0O3pwGRGuDXPOMO6BUaxZOIEBRwjgtX8AYoa/1RcYvn3ikwSISmUdjJM1BnPAxvsyWXitb77tUrdyFiJdcj0TYoO3PluyJ64CqIdJDeqrqcoCsqq9m6ytZI3eZfwfGaICiQtQPNw3XZ70may6Cb9LodbjguVd6Go4u2BktjtDJHrqW9tc8GLVRmRSCMYzImqARzBpMzOv/YPUa7t9VzNFuyPFrnmy3qLcN2kbMh0Q/vbLxWspEOavTpjfjhFv7/6R+ObpoJMCwCFBzjnNnfcOIaq2R1pEmcu1oTeowbAhRwm81wsBaZ+0ZYWLZIw0liPuuIdw==X02fn</property>
+    <property name="confluence.setup.server.id"></property>
     <property name="confluence.webapp.context.path"></property>
     <property name="hibernate.c3p0.acquire_increment">1</property>
     <property name="hibernate.c3p0.idle_test_period">100</property>
@@ -20,9 +20,9 @@
     <property name="hibernate.c3p0.min_size">0</property>
     <property name="hibernate.c3p0.timeout">30</property>
     <property name="hibernate.connection.driver_class">com.mysql.jdbc.Driver</property>
-    <property name="hibernate.connection.password"><%= confluence_password -></property>
+    <property name="hibernate.connection.password"><%= confluence_password -%></property>
     <property name="hibernate.connection.url">jdbc:mysql://localhost/<%= confluence_database -%>?autoReconnect=true&amp;sessionVariables=storage_engine%3DInnoDB</property>
-    <property name="hibernate.connection.username"><%= confluence_user -></property>
+    <property name="hibernate.connection.username"><%= confluence_user -%></property>
     <property name="hibernate.database.lower_non_ascii_supported">true</property>
     <property name="hibernate.dialect">com.atlassian.hibernate.dialect.MySQLDialect</property>
     <property name="hibernate.setup">true</property>

@@ -1,20 +1,20 @@
 #!/bin/bash
 # cleanup everything to repeat testing.
 
-set -e
+#set -e
 set -u
 
 # confluence 
-/etc/init.d/confluence stop
-/usr/local/confluence/confluence/bin/shutdown.sh
+/usr/local/confluence-3.3-std/bin/shutdown.sh
 
-rm /etc/init.d/confluence
+yes | rm /etc/init.d/confluence
 rm -rf /usr/local/confluence
 rm -rf /usr/local/confluence-3.3-std/
-rm -rf /usr/local/confluenct-data
+rm -rf /usr/local/confluence-data
 
 # mysql
-mysqladmin drop confluence
-service stop mysql
-yum remove mysql-server
-yum remove mysql
+mysql -e "drop user 'confluence'@'localhost';"
+yes "Yes" | mysqladmin drop confluence
+service mysqld stop
+#yes | yum remove mysql-server
+#yes | yum remove mysql
