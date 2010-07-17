@@ -148,7 +148,7 @@ class confluence {
     command => "mysql -e \"create database ${confluence_database}; \
                grant all on ${confluence_database}.* to '${confluence_user}'@'localhost' \
 	       identified by '${confluence_password}';\"; \
-	       mysqlimport ${confluence_database} /tmp/confluence.sql",
+	       mysql ${confluence_database} > /tmp/confluence.sql",
     unless => "/usr/bin/mysql ${confluence_database}",
     require => [ Service[ "mysqld" ], 
                  File[ "/tmp/confluence.sql" ] ]; 
