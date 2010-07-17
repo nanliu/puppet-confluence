@@ -80,7 +80,7 @@ class confluence {
       ensure => present,
   }
 
-  File { owner => 0, group => 0, mode => 644 }
+  File { owner => '0', group => '0', mode => '0644' }
   Exec { path => "/bin:/sbin:/usr/bin:/usr/sbin" }
 
   file { "/tmp/confluence-3.3-std.tar.gz":
@@ -105,7 +105,7 @@ class confluence {
     require => Exec [ "extract_confluence" ];
   }
 
-  # confluence package have wrong userid 
+  # confluence package have wrong userid 1418
   exec { "chown_confluence":
     command => "chown -R root ${confluence_installdir}/${confluence_version}",
     subscribe => Exec [ "extract_confluence" ],
@@ -145,9 +145,7 @@ class confluence {
   }
 
   exec { "create_${confluence_database}":
-    command => "mysql -e \"create user '${confluence_user}'@'localhost' \
-               identified by '${confluence_password}'; \
-	       create database ${confluence_database}; \
+    command => "mysql -e \"create database ${confluence_database}; \
                grant all on ${confluence_database}.* to '${confluence_user}'@'localhost' \
 	       identified by '${confluence_password}';\"; \
 	       mysqlimport ${confluence_database} /tmp/confluence.sql",
