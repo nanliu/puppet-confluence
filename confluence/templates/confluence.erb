@@ -39,7 +39,7 @@ case "$1" in
   ;;
   status)
     # this appears to be a bug with confluence catalina.sh
-    status -p /var/run/conflunce.pid
+    status -p ${CATALINA_PID}
     RETVAL=$?
   ;;
   *)
