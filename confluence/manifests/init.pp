@@ -1,7 +1,6 @@
 # Class: confluence
 #
 # Parameters:
-#  *Avoid trailing /
 #  ${confluence_installdir} 
 #  ${confluence_datadir}
 #  ${confluence_version}
@@ -12,9 +11,11 @@
 # 
 # Actions:
 #  This will install confluence to /usr/local/confluence/ -> ../confluence-{version}/
-#
+#  The initial mysql database will be populated with sensible defaults and mysql database. 
+#  
 # Requires:
-#  puppet-mysql
+#  mysql
+#
 # Sample Usage:
 #
 
@@ -29,15 +30,26 @@ class confluence {
   } else {
     $confluence_installdir=$params::confluence_installdir
   }
-  #$confluence_installdir = '/usr/local'
-  #$confluence_dir = '/usr/local/confluence'
-  #$confluence_datadir = '/usr/local/confluence-data'
-  #$confluence_version = 'confluence-3.3-std'
-  # mysql database connection info
-  #$confluence_database = 'confluence'
-  #$confluence_user = 'confluence'
-  #$confluence_password = 'puppetrocks'
-  
+  if $params::confluence_dir=='' { 
+    notice ("params::confluence_dir unset, assuming /usr/local") 
+    $confluence_dir='/usr/local/confluence'
+  } else {
+    $confluence_dir=$params::confluence_dir
+  }
+  if $params::confluence_datadir=='' { 
+    notice ("params::confluence_datadir unset, assuming /usr/local") 
+    $confluence_datadir='/usr/local/confluence-data'
+  } else {
+    $confluence_datadir=$params::confluence_datadir
+  }
+  if $params::confluence_version=='' { 
+    notice ("params::confluence_version unset, assuming /usr/local") 
+    $confluence_version='confluence-3.3-std'
+  } else {
+    $confluence_version=$params::confluence_version
+  }
+
+  # mysql configuration 
   if $params::confluence_database=='' { 
     notice ("params::confluence_database, assuming confluence") 
     $confluence_database='confluence'
@@ -73,33 +85,33 @@ class confluence {
     source => "puppet:///modules/confluence/confluence-3.3-std.tar.gz",
   }
 
-  file { [ "${params::confluence_installdir}",
-           "${params::confluence_datadir}" ]:
+  file { [ "${confluence_installdir}",
+           "${confluence_datadir}" ]:
     ensure => directory,
   }
 
   exec { "extract_confluence":
-    command => "gtar -xf /tmp/confluence-3.3-std.tar.gz -C ${params::confluence_installdir}",
-    require => File [ "${params::confluence_installdir}", 
-		      "${params::confluence_datadir}" ],
+    command => "gtar -xf /tmp/confluence-3.3-std.tar.gz -C ${confluence_installdir}",
+    require => File [ "${confluence_installdir}", 
+		      "${confluence_datadir}" ],
     subscribe => File [ "/tmp/confluence-3.3-std.tar.gz" ],
-    creates => "${params::confluence_installdir}/${params::confluence_version}/confluence",
+    creates => "${confluence_installdir}/${confluence_version}/confluence",
   }
 
-  file { "${params::confluence_dir}":
-    ensure => "${params::confluence_installdir}/${params::confluence_version}",
+  file { "${confluence_dir}":
+    ensure => "${confluence_installdir}/${confluence_version}",
     require => Exec [ "extract_confluence" ];
   }
 
   exec { "chown_confluence":
-    command => "chown -R root ${params::confluence_installdir}/${params::confluence_version}",
+    command => "chown -R root ${confluence_installdir}/${confluence_version}",
     subscribe => Exec [ "extract_confluence" ],
     refreshonly => true,
   }
 
   file { "confluence-init.properties":
-    name => "${params::confluence_installdir}/${params::confluence_version}/confluence/WEB-INF/classes/confluence-init.properties",
-    content => template ('confluence-init.properties.erb'),
+    name => "${confluence_installdir}/${confluence_version}/confluence/WEB-INF/classes/confluence-init.properties",
+    content => template ("confluence-init.properties.erb"),
     subscribe => Exec [ "extract_confluence" ],
   }
 
@@ -108,7 +120,7 @@ class confluence {
 
   file { "/etc/init.d/confluence":
     mode => 755,
-    content => template ('confluence.erb'),
+    content => template ("confluence.erb"),
   }
 
   service { "confluence":
@@ -119,7 +131,6 @@ class confluence {
     subscribe => File[ "confluence-init.properties" ];
   }
 
-
   # mysql database setup
   file {"/tmp/confluence.sql":
     source => "puppet:///modules/confluence/confluence.sql",
@@ -129,11 +140,11 @@ class confluence {
     command => "mysql -e \"create user '${confluence_user}'@'localhost' \
                identified by '${confluence_password}'; \
 	       create database ${confluence_database}; \
-               grant all on ${confluence_database}.* to ${confluence_user}@localhost \
+               grant all on ${confluence_database}.* to '${confluence_user}'@'localhost' \
 	       identified by '${confluence_password}';\"; \
 	       mysqlimport ${confluence_database} /tmp/confluence.sql",
     unless => "/usr/bin/mysql ${confluence_database}",
     require => [ Service[ "mysqld" ], 
-                 File["/tmp/confluence.sql"] ]; 
+                 File[ "/tmp/confluence.sql" ] ]; 
   }
 }

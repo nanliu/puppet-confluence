@@ -12,8 +12,7 @@ class confluence::redhat {
 
   file { "/tmp/${confluence_java}" :
     mode => 755,
-    #source => "puppet:///confluence/${confuence_java}",
-    source => "/root/src/puppet-confluence/confluence/files/${confluence_java}",
+    source => "puppet:///modules/confluence/${confuence_java}",
   }
 
   Exec { path => "/bin:/sbin:/usr/bin:/usr/sbin" }
