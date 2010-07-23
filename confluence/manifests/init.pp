@@ -1,20 +1,24 @@
 # Class: confluence
 #
 # Parameters:
-#  ${confluence_installdir} 
-#  ${confluence_datadir}
-#  ${confluence_version}
+#  ${confluence_installdir} installation target, default /usr/local
+#  ${confluence_dir}        softlink which points to confluence files, default /usr/local/confluence
+#  ${confluence_datadir}    confluence database directory, default /usr/local/confluence-data
+#  ${confluence_version}    confluence software version, default match package name
+#  ${confluence_database}   mysql database name
+#  ${confluence_user}       mysql username
+#  ${confluence_password}   mysql password
 #  optional: (not implemented)
-#  ${confluence_aliasdir} softlink which points to installdir (recommended to maintain multiple versions
 #  ${confluence_serverport} default 8000
 #  ${confluence_connectorport} default 8080
-# 
+#
 # Actions:
 #  This will install confluence to /usr/local/confluence/ -> ../confluence-{version}/
-#  The initial mysql database will be populated with sensible defaults and mysql database. 
-#  
+#  Packages: jdk1.6, libXp, mysql,
+#  The initial mysql database will be populated with sensible defaults and mysql database.
+#
 # Requires:
-#  mysql
+#  module mysql
 #
 # Sample Usage:
 #
@@ -24,46 +28,46 @@ class confluence {
   include confluence::params
 
   # confluence installation defaults
-  if $params::confluence_installdir=='' { 
-    notice ("params::confluence_installdir unset, assuming /usr/local") 
+  if $params::confluence_installdir=='' {
+    notice ("params::confluence_installdir unset, assuming /usr/local")
     $confluence_installdir='/usr/local'
   } else {
     $confluence_installdir=$params::confluence_installdir
   }
-  if $params::confluence_dir=='' { 
-    notice ("params::confluence_dir unset, assuming /usr/local") 
+  if $params::confluence_dir=='' {
+    notice ("params::confluence_dir unset, assuming /usr/local")
     $confluence_dir='/usr/local/confluence'
   } else {
     $confluence_dir=$params::confluence_dir
   }
-  if $params::confluence_datadir=='' { 
-    notice ("params::confluence_datadir unset, assuming /usr/local") 
+  if $params::confluence_datadir=='' {
+    notice ("params::confluence_datadir unset, assuming /usr/local")
     $confluence_datadir='/usr/local/confluence-data'
   } else {
     $confluence_datadir=$params::confluence_datadir
   }
-  if $params::confluence_version=='' { 
-    notice ("params::confluence_version unset, assuming /usr/local") 
+  if $params::confluence_version=='' {
+    notice ("params::confluence_version unset, assuming /usr/local")
     $confluence_version='confluence-3.3-std'
   } else {
     $confluence_version=$params::confluence_version
   }
 
-  # mysql configuration 
-  if $params::confluence_database=='' { 
-    notice ("params::confluence_database, assuming confluence") 
+  # mysql configuration
+  if $params::confluence_database=='' {
+    notice ("params::confluence_database, assuming confluence")
     $confluence_database='confluence'
   } else {
     $confluence_database=$params::confluence_database
   }
-  if $params::confluence_user=='' { 
-    notice ("params::confluence_user, assuming confluence") 
+  if $params::confluence_user=='' {
+    notice ("params::confluence_user, assuming confluence")
     $confluence_user='confluence'
   } else {
     $confluence_user=$params::confluence_user
   }
-  if $params::confluence_password=='' { 
-    notice ("params::confluence_password, assuming confluence") 
+  if $params::confluence_password=='' {
+    notice ("params::confluence_password, assuming confluence")
     $confluence_password='puppetrocks'
   } else {
     $confluence_password=$params::confluence_password
@@ -128,15 +132,12 @@ class confluence {
     subscribe => Exec [ "extract_confluence" ],
   }
 
-  # cannot autogen license key, pending confluence API.
+  # cannot autogen hash from license key, pending confluence API.
   file { "confluence.cfg.xml":
     name => "${confluence_datadir}/confluence.cfg.xml",
     content => template ("confluence.cfg.xml.erb"),
     noop => true,
   }
-
-  #file { "server.xml":
-  #}
 
   file { "/etc/init.d/confluence":
     mode => 755,
@@ -147,24 +148,24 @@ class confluence {
     enable => true,
     ensure => running,
     hasstatus => true,
-    require => [ File[ "/etc/init.d/confluence", 
-                     "confluence-init.properties" ],
-	         Exec[ "create_${confluence_database}",
-		     "extract_confluence_data"] ];
+    require => [ File[ "/etc/init.d/confluence",
+                       "confluence-init.properties" ],
+	             Exec[ "create_${confluence_database}",
+		               "extract_confluence_data"] ];
   }
 
-  # mysql database setup (onetime)
   file {"/tmp/confluence.sql":
     source => "puppet:///modules/confluence/confluence.sql",
   }
 
+  # mysql database creation and table setup (onetime)
   exec { "create_${confluence_database}":
     command => "mysql -e \"create database ${confluence_database}; \
-               grant all on ${confluence_database}.* to '${confluence_user}'@'localhost' \
-	       identified by '${confluence_password}';\"; \
-	       mysql ${confluence_database} < /tmp/confluence.sql",
+                grant all on ${confluence_database}.* to '${confluence_user}'@'localhost' \
+	            identified by '${confluence_password}';\"; \
+	            mysql ${confluence_database} < /tmp/confluence.sql",
     unless => "/usr/bin/mysql ${confluence_database}",
-    require => [ Service[ "mysqld" ], 
+    require => [ Service[ "mysqld" ],
                  File[ "/tmp/confluence.sql" ] ],
-  } 
+  }
 }
