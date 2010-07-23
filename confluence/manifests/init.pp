@@ -161,9 +161,9 @@ class confluence {
   # mysql database creation and table setup (onetime)
   exec { "create_${confluence_database}":
     command => "mysql -e \"create database ${confluence_database}; \
-                grant all on ${confluence_database}.* to '${confluence_user}'@'localhost' \
-	            identified by '${confluence_password}';\"; \
-	            mysql ${confluence_database} < /tmp/confluence.sql",
+               grant all on ${confluence_database}.* to '${confluence_user}'@'localhost' \
+	       identified by '${confluence_password}';\"; \
+	       mysql ${confluence_database} < /tmp/confluence.sql",
     unless => "/usr/bin/mysql ${confluence_database}",
     require => [ Service[ "mysqld" ],
                  File[ "/tmp/confluence.sql" ] ],
