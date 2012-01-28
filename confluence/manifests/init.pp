@@ -26,6 +26,7 @@
 class confluence {
   include mysql::server
   include confluence::params
+  include httpd::proxy
 
   # confluence installation defaults
   if $params::confluence_installdir=='' {
@@ -48,7 +49,7 @@ class confluence {
   }
   if $params::confluence_version=='' {
     notice ("params::confluence_version unset, assuming /usr/local")
-    $confluence_version='confluence-3.3-std'
+    $confluence_version='atlassian-confluence-4.1.3'
   } else {
     $confluence_version=$params::confluence_version
   }
@@ -76,9 +77,6 @@ class confluence {
   # not usable for now
   $confluence_license='AAABOg0ODAoPeNpdkF1rwjAUhu/zKwK7rrRxm0MITJsOumkdtk6Q3cT06AJpKvmQ+e8Xawuy23PyPu9z8rCFGr97hUmCk8l0PJk+veCUVZjESYwYWGHkyclW07TVB+VBC8BJjDcWjP2e4tJx48DghRSgLaDCN3swq0O3pwGRGuDXPOMO6BUaxZOIEBRwjgtX8AYoa/1RcYvn3ikwSISmUdjJM1BnPAxvsyWXitb77tUrdyFiJdcj0TYoO3PluyJ64CqIdJDeqrqcoCsqq9m6ytZI3eZfwfGaICiQtQPNw3XZ70may6Cb9LodbjguVd6Go4u2BktjtDJHrqW9tc8GLVRmRSCMYzImqARzBpMzOv/YPUa7t9VzNFuyPFrnmy3qLcN2kbMh0Q/vbLxWspEOavTpjfjhFv7/6R+ObpoJMCwCFBzjnNnfcOIaq2R1pEmcu1oTeowbAhRwm81wsBaZ+0ZYWLZIw0liPuuIdw==X02fn'
 
-  case $operatingsystem {
-    'redhat','centos': { include confluence::redhat }
-  }
 
   package {
     $params::default_packages:
@@ -88,30 +86,23 @@ class confluence {
   File { owner => '0', group => 'root', mode => '0644' }
   Exec { path => "/bin:/sbin:/usr/bin:/usr/sbin" }
 
-  file { "/tmp/confluence-3.3-std.tar.gz":
-    source => "puppet:///modules/confluence/confluence-3.3-std.tar.gz",
-  }
 
   file { "${confluence_installdir}":
     ensure => directory,
   }
 
   exec { "extract_confluence":
-    command => "gtar -xf /tmp/confluence-3.3-std.tar.gz -C ${confluence_installdir}",
+    command => "gtar -xf /tmp/atlassian-confluence-4.1.3.tar.gz -C ${confluence_installdir}",
     require => File [ "${confluence_installdir}" ],
-    subscribe => File [ "/tmp/confluence-3.3-std.tar.gz" ],
+    subscribe => Exec [ "dl_cf" ],
     creates => "${confluence_installdir}/${confluence_version}",
   }
 
-  file { "/tmp/confluence-data.tar.gz":
-    source => "puppet:///modules/confluence/confluence-data.tar.gz",
-  }
 
-  exec { "extract_confluence_data":
-    command => "gtar -xf /tmp/confluence-data.tar.gz -C ${confluence_installdir}",
-    require => File [ "${confluence_installdir}" ],
-    subscribe => File [ "/tmp/confluence-data.tar.gz" ],
-    creates => "${confluence_datadir}",
+  exec {"dl_cf":
+    command => "wget http://www.atlassian.com/software/confluence/downloads/binary/atlassian-confluence-4.1.3.tar.gz",
+    cwd => "/tmp",
+    creates => "/tmp/atlassian-confluence-4.1.3.tar.gz",
   }
 
   file { "${confluence_dir}":
@@ -120,52 +111,68 @@ class confluence {
   }
 
   # confluence package have wrong userid 1418
-  exec { "chown_confluence":
-    command => "chown -R root ${confluence_installdir}/${confluence_version}",
-    subscribe => Exec [ "extract_confluence" ],
-    refreshonly => true,
-  }
+#  exec { "chown_confluence":
+#    command => "chown -R root ${confluence_installdir}/${confluence_version}",
+
+#    subscribe => Exec [ "extract_confluence" ],
+#    refreshonly => true,
+#  }
 
   file { "confluence-init.properties":
     name => "${confluence_installdir}/${confluence_version}/confluence/WEB-INF/classes/confluence-init.properties",
-    content => template ("confluence-init.properties.erb"),
+    content => template ("confluence/confluence-init.properties.erb"),
     subscribe => Exec [ "extract_confluence" ],
   }
 
   # cannot autogen hash from license key, pending confluence API.
-  file { "confluence.cfg.xml":
-    name => "${confluence_datadir}/confluence.cfg.xml",
-    content => template ("confluence.cfg.xml.erb"),
-    noop => true,
-  }
+  #file { "confluence.cfg.xml":
+  #  name => "${confluence_datadir}/confluence.cfg.xml",
+  #  content => template ("confluence.cfg.xml.erb"),
+  #  noop => true,
+#  }
 
   file { "/etc/init.d/confluence":
-    mode => 755,
-    content => template ("confluence.erb"),
+    mode => '0755',
+    content => template ("confluence/confluence.erb"),
   }
 
   service { "confluence":
-    enable => true,
-    ensure => running,
-    hasstatus => true,
-    require => [ File[ "/etc/init.d/confluence",
-                       "confluence-init.properties" ],
-	             Exec[ "create_${confluence_database}",
-		               "extract_confluence_data"] ];
+    ensure      => running,
+    enable      => true,
+    hasstatus   => true,
+    require     => [ File[ "/etc/init.d/confluence" ,
+                   "confluence-init.properties" 
+                   ],
+                     Exec[ "create_${confluence_database}" ]
+                   ],
   }
+
+
+  service { "iptables": 
+    ensure => stopped,
+    hasstatus => true,
+  } 
 
   file {"/tmp/confluence.sql":
     source => "puppet:///modules/confluence/confluence.sql",
   }
 
+
+
   # mysql database creation and table setup (onetime)
   exec { "create_${confluence_database}":
     command => "mysql -e \"create database ${confluence_database}; \
                grant all on ${confluence_database}.* to '${confluence_user}'@'localhost' \
-	       identified by '${confluence_password}';\"; \
-	       mysql ${confluence_database} < /tmp/confluence.sql",
-    unless => "/usr/bin/mysql ${confluence_database}",
-    require => [ Service[ "mysqld" ],
+               identified by '${confluence_password}';\"; \ ", 
+        
+
+######       mysql ${confluence_database} < /tmp/confluence.sql",
+   unless => "/usr/bin/mysql ${confluence_database}",
+   require => [ Service[ "mysqld" ],
                  File[ "/tmp/confluence.sql" ] ],
+  }
+
+  file {"/etc/httpd/conf.d/confluence.conf":
+    source => "puppet:///confluence/confluence.conf",
   }
 }
