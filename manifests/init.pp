@@ -109,22 +109,7 @@ class confluence {
   }
 
 
-  service { "iptables": 
-    ensure => stopped,
-    hasstatus => true,
   } 
 
-  file {'/root/cfbu.sh':
-    source => 'puppet:///confluence/cfbu.sh',
-    mode   => '0700',
-    group  => 'root',
-    owner  => 'root',
-  }
 
-  cron {'backup_confluence_dirs':
-    command => '/root/cfbu.sh',
-    user    => root,
-    hour    => 04,
-    minute  => 19,
-  }
 }
